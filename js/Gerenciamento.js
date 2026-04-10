@@ -95,6 +95,18 @@ const reservationActivityLabels = {
   cancel: 'cancelou uma reserva'
 };
 
+const IMPORTANT_INFO_WINDOW_HOURS = 72;
+const IMPORTANT_INFO_WINDOW_MS = IMPORTANT_INFO_WINDOW_HOURS * 60 * 60 * 1000;
+
+const isImportantInfoWithinWindow = (item) => {
+  const timestamp = item?.timestamp;
+  if (!timestamp) return false;
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) return false;
+
+  return (Date.now() - parsed.getTime()) <= IMPORTANT_INFO_WINDOW_MS;
+};
+
 const showDeviceReservationNotification = async (item) => {
   if (!('Notification' in window)) return;
 
@@ -217,13 +229,14 @@ const loadImportantInfoFeed = async () => {
 
     const result = await response.json().catch(() => ({ items: [] }));
     const items = Array.isArray(result.items) ? result.items : [];
-    renderImportantInfoFeed(items);
+    const recentItems = items.filter(isImportantInfoWithinWindow);
+    renderImportantInfoFeed(recentItems);
 
-    if (items.length) {
-      const newestTimestamp = items[0].timestamp || null;
+    if (recentItems.length) {
+      const newestTimestamp = recentItems[0].timestamp || null;
       if (newestTimestamp && newestTimestamp !== lastImportantActivityTimestamp) {
         const newItems = lastImportantActivityTimestamp
-          ? items.filter(item => item.timestamp && item.timestamp > lastImportantActivityTimestamp)
+          ? recentItems.filter(item => item.timestamp && item.timestamp > lastImportantActivityTimestamp)
           : [];
 
         if (newItems.length) {
