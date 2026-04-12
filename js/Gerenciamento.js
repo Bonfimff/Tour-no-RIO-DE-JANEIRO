@@ -53,9 +53,10 @@ const fetchWithApiFallback = async (path, options = {}) => {
 let pendingUpdateId = null; // id do agendamento que estÃ¡ entrando no modo editar
 let currentlyEditingAccount = null; // id do usuÃ¡rio de acesso que estÃ¡ sendo editado
 let selectedRoleName = null; // role atual selecionada no painel de nÃ­veis
-let currentRolesConfig = {}; // guarda as permissÃµes atuais carregadas
-let currentUserPermissions = null; // permissÃµes do usuÃ¡rio logado
-let currentReservations = []; // lista de reservas carregadas para gerenciamento da pÃ¡gina
+let currentRolesConfig = {}; // guarda as permissões atuais carregadas
+let currentUserPermissions = null; // permissões do usuário logado
+let currentReservations = []; // lista de reservas carregadas para gerenciamento da página
+let currentAccounts = []; // lista de contas carregadas para pesquisa na aba Contas
 let importantInfoRefreshTimer = null;
 
 const escapeHtml = (value) => String(value ?? '')
@@ -66,6 +67,60 @@ const escapeHtml = (value) => String(value ?? '')
   .replace(/'/g, '&#39;');
 
 let lastImportantActivityTimestamp = localStorage.getItem('lastImportantActivityTimestamp') || null;
+
+const renderAccountsTable = (accounts) => {
+  const tableBody = document.getElementById('accountsBody');
+  if (!tableBody) return;
+
+  const query = (document.getElementById('accountsNameSearch')?.value || '').trim().toLowerCase();
+  tableBody.innerHTML = '';
+
+  if (!Array.isArray(accounts) || !accounts.length) {
+    const emptyMessage = query
+      ? `Nenhuma conta encontrada para "${escapeHtml(query)}".`
+      : 'Nenhuma conta encontrada.';
+    tableBody.innerHTML = `<tr><td colspan="8" style="padding:0.75rem;">${emptyMessage}</td></tr>`;
+    return;
+  }
+
+  accounts.forEach((account) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td data-label="ID">${escapeHtml(account.id)}</td>
+      <td data-label="E-mail">${escapeHtml(account.email)}</td>
+      <td data-label="Nome">${escapeHtml(account.nome)}</td>
+      <td data-label="Sobrenome">${escapeHtml(account.sobrenome)}</td>
+      <td data-label="Celular">${escapeHtml(account.celular)}</td>
+      <td data-label="Role">${escapeHtml(account.role)}</td>
+      <td data-label="País">${escapeHtml(account.pais_origem)}</td>
+      <td data-label="Gênero">${escapeHtml(account.genero)}</td>
+    `;
+
+    const canEditOthers = !!currentUserPermissions?.manageOtherEdit;
+    if (!canEditOthers) {
+      row.style.cursor = 'default';
+    } else {
+      row.style.cursor = 'pointer';
+      row.addEventListener('dblclick', () => {
+        openAccountModal(account);
+      });
+    }
+
+    tableBody.appendChild(row);
+  });
+};
+
+const applyAccountsSearchFilter = () => {
+  const query = (document.getElementById('accountsNameSearch')?.value || '').trim().toLowerCase();
+  const visibleAccounts = query
+    ? currentAccounts.filter((account) => {
+        const fullName = `${account.nome || ''} ${account.sobrenome || ''}`.toLowerCase();
+        return fullName.includes(query) || (account.nome || '').toLowerCase().includes(query);
+      })
+    : currentAccounts;
+
+  renderAccountsTable(visibleAccounts);
+};
 const IMPORTANT_INFO_DISMISSED_KEY = 'importantInfoDismissedItems';
 
 const getDismissedImportantInfoItems = () => {
@@ -1175,7 +1230,7 @@ const carregarAgendamentosDoBanco = async () => {
       }
 
       if (nextTours.length === 0) {
-        tourListContainer.innerHTML = '<div style="color:#6b7280;">Nenhum prÃ³ximo tour confirmado.</div>';
+        tourListContainer.innerHTML = '<div style="color:#6b7280;">Nenhum próximo tour confirmado.</div>';
       } else {
         const totalPeople = nextTours.reduce((sum, group) => sum + (group.pessoas || 0), 0);
         const tourGuides = [...new Set(nextTours.map(group => group.guia || '-'))].join(', ');
@@ -1489,69 +1544,14 @@ const carregarContasDoBanco = async () => {
       return;
     }
 
-    tableBody.innerHTML = '';
-    accounts.forEach((account) => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td data-label="ID">${account.id}</td>
-        <td data-label="E-mail">${account.email}</td>
-        <td data-label="Nome">${account.nome}</td>
-        <td data-label="Sobrenome">${account.sobrenome}</td>
-        <td data-label="Celular">${account.celular}</td>
-        <td data-label="Role">${account.role}</td>
-        <td data-label="País">${account.pais_origem}</td>
-        <td data-label="Gênero">${account.genero}</td>
-      `;
+    currentAccounts = accounts;
+    const accountsSearchInput = document.getElementById('accountsNameSearch');
+    if (accountsSearchInput && !accountsSearchInput.dataset.searchAttached) {
+      accountsSearchInput.addEventListener('input', applyAccountsSearchFilter);
+      accountsSearchInput.dataset.searchAttached = '1';
+    }
 
-      const editBtn = row.querySelector('.btn-edit-account');
-      const deleteBtn = row.querySelector('.btn-delete-account');
-      const canEditOthers = !!currentUserPermissions.manageOtherEdit;
-
-      if (!canEditOthers) {
-        if (editBtn) {
-          editBtn.disabled = true;
-          editBtn.title = 'Sem permissÃ£o para alterar outros perfis';
-          editBtn.style.opacity = '0.5';
-          editBtn.style.cursor = 'not-allowed';
-        }
-        if (deleteBtn) {
-          deleteBtn.disabled = true;
-          deleteBtn.title = 'Sem permissÃ£o para excluir outros perfis';
-          deleteBtn.style.opacity = '0.5';
-          deleteBtn.style.cursor = 'not-allowed';
-        }
-      } else {
-        editBtn?.addEventListener('click', () => {
-          openAccountModal(account);
-        });
-
-        row.style.cursor = 'pointer';
-        row.addEventListener('dblclick', () => {
-          openAccountModal(account);
-        });
-
-        deleteBtn?.addEventListener('click', async () => {
-          if (!confirm(`Excluir conta ${account.email}?`)) return;
-
-          const deleteResp = await fetchWithApiFallback('/delete_user', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ admin_email: currentUserEmail, id: account.id })
-          });
-
-          if (!deleteResp.ok) {
-            const errorText = await deleteResp.text().catch(() => '');
-            alert(`Falha ao excluir usuÃ¡rio: ${deleteResp.status} ${errorText}`);
-            return;
-          }
-
-          alert('Conta excluÃ­da com sucesso.');
-          carregarContasDoBanco();
-        });
-      }
-
-      tableBody.appendChild(row);
-    });
+    applyAccountsSearchFilter();
 
     // Atualiza gráfico de países com base no cadastro de contas
     updateCountryPie(accounts);

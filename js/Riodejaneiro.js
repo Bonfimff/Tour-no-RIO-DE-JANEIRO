@@ -7,13 +7,16 @@
     let rolePermissionsMap = {};
     let toursFromDatabase = [];
 
+    const ALLOW_PUBLIC_NAV_ITEMS_WHEN_LOGGED_OUT = window.ALLOW_PUBLIC_NAV_ITEMS_WHEN_LOGGED_OUT !== false;
+    window.ALLOW_PUBLIC_NAV_ITEMS_WHEN_LOGGED_OUT = ALLOW_PUBLIC_NAV_ITEMS_WHEN_LOGGED_OUT;
+
     const DEFAULT_ROLE_PERMISSIONS = {
         cliente_user: {
             manageReservas: false,
             manageContas: false,
             managePerfis: false,
             pages: ['Principal', 'Reservas'],
-            tabs: ['Principal', 'Reservas']
+            tabs: ['Principal', 'Reservas', 'SOBRE', 'CONTATO', 'AJUDA']
         },
         admin: {
             manageReservas: true,
@@ -96,11 +99,49 @@
             { selector: '[data-i18n="nav_help"]', name: 'AJUDA' }
         ];
 
-        navMap.forEach(({ selector, name }) => {
-            const el = document.querySelector(selector) || document.querySelector(`a[href*="${name.toLowerCase()}"]`);
-            if (el) {
-                el.style.display = tabs.includes(name) ? '' : 'none';
+        const showPublicNavByDefault = window.ALLOW_PUBLIC_NAV_ITEMS_WHEN_LOGGED_OUT;
+        const showPublicNavItems = showPublicNavByDefault || canAccessManagement() || tabs.includes('SOBRE') || tabs.includes('CONTATO') || tabs.includes('AJUDA');
+        const isMobileScreen = window.matchMedia('(max-width: 900px)').matches;
+        const headerNavs = document.querySelectorAll('.nav-left nav');
+
+        document.querySelectorAll('.mobile-menu-main').forEach((container) => {
+            container.style.removeProperty('display');
+            container.style.removeProperty('visibility');
+            container.style.removeProperty('opacity');
+        });
+
+        headerNavs.forEach((container) => {
+            if (isMobileScreen) {
+                container.style.setProperty('display', 'none', 'important');
+                container.style.visibility = 'hidden';
+                container.style.opacity = '0';
+            } else if (showPublicNavItems) {
+                container.style.removeProperty('display');
+                container.style.visibility = 'visible';
+                container.style.opacity = '';
+            } else {
+                container.style.setProperty('display', 'none', 'important');
+                container.style.visibility = 'hidden';
+                container.style.opacity = '0';
             }
+        });
+
+        navMap.forEach(({ selector, name }) => {
+            const els = Array.from(document.querySelectorAll(selector));
+            if (!els.length) {
+                els.push(...document.querySelectorAll(`a[href*="${name.toLowerCase()}"]`));
+            }
+            els.forEach((el) => {
+                if (showPublicNavItems) {
+                    el.style.display = '';
+                    el.style.visibility = 'visible';
+                    el.style.opacity = '';
+                    el.classList.remove('hidden');
+                    el.removeAttribute('hidden');
+                } else {
+                    el.style.display = 'none';
+                }
+            });
         });
 
         // Itens do menu de perfil seguem as tabs autorizadas
@@ -930,6 +971,15 @@
             }
         });
 
+        document.querySelectorAll('[data-i18n-html]').forEach(el => {
+            const key = el.getAttribute('data-i18n-html');
+            if (!key) return;
+            const value = strings[key];
+            if (typeof value === 'string') {
+                el.innerHTML = value;
+            }
+        });
+
         document.querySelectorAll('[data-i18n-aria]').forEach(el => {
             const key = el.getAttribute('data-i18n-aria');
             if (!key) return;
@@ -979,10 +1029,18 @@
 
     const selectLanguage = (lang) => {
         const normalized = normalizeLang(lang);
+        const current = getCurrentLang();
+        if (normalized === current) {
+            return;
+        }
+
         setSavedLang(normalized);
         setDocumentLang(normalized);
         updateLangSelectorButton(normalized);
         dispatchLanguageChange(normalized);
+
+        // Reload the page after switching language so all content reflects the selection.
+        window.location.reload();
     };
 
     const initLanguageSelector = () => {
@@ -1216,6 +1274,9 @@
         });
 
         updateMobileMenuView();
+        if (typeof window.applyRoleBasedControls === 'function') {
+            window.applyRoleBasedControls();
+        }
     };
 
     const initHamburgerMenu = () => {
@@ -1310,11 +1371,11 @@
                 </form>
                 <form id="passwordResetForm" class="login-modal__form" style="display:none;">
                     <div class="login-modal__field">
-                        <label for="resetEmail">Email</label>
+                        <label for="resetEmail" data-i18n="reset_email_label">${strings.reset_email_label || 'Email'}</label>
                         <input id="resetEmail" type="email" autocomplete="email" required />
                     </div>
                     <div class="login-modal__field">
-                        <label>CÃ³digo de confirmaÃ§Ã£o</label>
+                        <label data-i18n="reset_code_label">${strings.reset_code_label || 'Código de confirmação'}</label>
                         <div class="register-code-group">
                             <input id="resetCode1" class="register-code-input reset-code-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" required />
                             <input id="resetCode2" class="register-code-input reset-code-input" maxlength="1" inputmode="numeric" pattern="[0-9]*" required />
@@ -1326,26 +1387,26 @@
                         <div class="register-code-status" style="height:1.2em;margin-bottom:0.5rem;"></div>
                     </div>
                     <div class="login-modal__field login-modal__field--password">
-                        <label for="resetNewPassword">Nova senha</label>
+                        <label for="resetNewPassword" data-i18n="reset_new_password_label">${strings.reset_new_password_label || 'Nova senha'}</label>
                         <div class="login-modal__password-wrapper">
                             <input id="resetNewPassword" type="password" autocomplete="new-password" minlength="6" required />
-                            <button type="button" class="login-modal__toggle-password reset-toggle-password" aria-label="Mostrar senha">
+                            <button type="button" class="login-modal__toggle-password reset-toggle-password" aria-label="${strings.login_show || 'Mostrar senha'}">
                                 <i class="fa fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
                     <div class="login-modal__field login-modal__field--password">
-                        <label for="resetConfirmPassword">Confirmar nova senha</label>
+                        <label for="resetConfirmPassword" data-i18n="reset_confirm_password_label">${strings.reset_confirm_password_label || 'Confirmar nova senha'}</label>
                         <div class="login-modal__password-wrapper">
                             <input id="resetConfirmPassword" type="password" autocomplete="new-password" minlength="6" required />
-                            <button type="button" class="login-modal__toggle-password reset-toggle-password" aria-label="Mostrar senha">
+                            <button type="button" class="login-modal__toggle-password reset-toggle-password" aria-label="${strings.login_show || 'Mostrar senha'}">
                                 <i class="fa fa-eye" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
                     <div class="login-modal__actions">
-                        <button type="submit" class="login-modal__submit">Atualizar senha</button>
-                        <button type="button" class="login-modal__forgot" id="resetBackToLogin">Voltar ao login</button>
+                        <button type="submit" class="login-modal__submit" data-i18n="reset_update_button">${strings.reset_update_button || 'Atualizar senha'}</button>
+                        <button type="button" class="login-modal__forgot" id="resetBackToLogin" data-i18n="reset_back_to_login">${strings.reset_back_to_login || 'Voltar ao login'}</button>
                     </div>
                 </form>
             </div>
@@ -1373,10 +1434,10 @@
             if (!statusTextEl) return;
 
             if (state === 'valid') {
-                statusTextEl.textContent = 'Codigo confirmado.';
+                statusTextEl.textContent = strings.reset_code_confirmed || 'Código confirmado.';
                 statusTextEl.style.color = '#28a745';
             } else if (state === 'invalid') {
-                statusTextEl.textContent = 'Codigo invalido.';
+                statusTextEl.textContent = strings.reset_code_invalid || 'Código inválido.';
                 statusTextEl.style.color = '#dc3545';
             } else {
                 statusTextEl.textContent = '';
@@ -1475,10 +1536,23 @@
             if (modalTitle) modalTitle.textContent = strings.login_title;
         };
 
+        const setResetRequestLoading = (isLoading) => {
+            const forgotBtn = overlay.querySelector('#loginForm .login-modal__forgot');
+            if (!forgotBtn) return;
+            forgotBtn.disabled = isLoading;
+            forgotBtn.classList.toggle('loading', isLoading);
+            if (isLoading) {
+                forgotBtn.dataset.originalLabel = forgotBtn.textContent;
+                forgotBtn.textContent = strings.reset_forgot_loading || 'Aguarde...';
+            } else {
+                forgotBtn.textContent = forgotBtn.dataset.originalLabel || strings.login_forgot;
+            }
+        };
+
         const showResetView = (email = '') => {
             if (loginFormElement) loginFormElement.style.display = 'none';
             if (resetFormElement) resetFormElement.style.display = '';
-            if (modalTitle) modalTitle.textContent = 'Redefinir senha';
+            if (modalTitle) modalTitle.textContent = strings.reset_title || 'Redefinir senha';
 
             const resetEmailInput = overlay.querySelector('#resetEmail');
             if (resetEmailInput) resetEmailInput.value = email;
@@ -1536,11 +1610,12 @@
                 return;
             }
 
+            setResetRequestLoading(true);
             try {
                 const response = await fetch(`${API_BASE_URL}/request_password_reset`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
+                    body: JSON.stringify({ email, lang: window.getCurrentLang?.() || 'pt' })
                 });
 
                 const payload = await response.json().catch(() => ({}));
@@ -1552,6 +1627,8 @@
                 showResetView(email);
             } catch (error) {
                 alert(error?.message || strings.reset_request_fail || 'Não foi possível solicitar redefinição de senha.');
+            } finally {
+                setResetRequestLoading(false);
             }
         });
 
@@ -1576,30 +1653,30 @@
             const confirmPassword = overlay.querySelector('#resetConfirmPassword')?.value || '';
 
             if (!email || !code || !newPassword || !confirmPassword) {
-                alert('Preencha todos os campos para redefinir sua senha.');
+                alert(strings.reset_fill_all || 'Preencha todos os campos para redefinir sua senha.');
                 return;
             }
 
             if (!/^[0-9]{6}$/.test(code)) {
-                alert('Digite um cÃ³digo vÃ¡lido de 6 dÃ­gitos.');
+                alert(strings.reset_code_invalid_digits || 'Digite um código válido de 6 dígitos.');
                 return;
             }
 
             if (!isResetCodeVerified) {
                 await maybeVerifyResetCode();
                 if (!isResetCodeVerified) {
-                    alert('CÃ³digo de recuperaÃ§Ã£o invÃ¡lido ou expirado.');
+                    alert(strings.reset_code_invalid_or_expired || 'Código de recuperação inválido ou expirado.');
                     return;
                 }
             }
 
             if (newPassword.length < 6) {
-                alert('A nova senha deve ter no mÃ­nimo 6 caracteres.');
+                alert(strings.reset_password_min_length || 'A nova senha deve ter no mínimo 6 caracteres.');
                 return;
             }
 
             if (newPassword !== confirmPassword) {
-                alert('A confirmaÃ§Ã£o da senha nÃ£o confere.');
+                alert(strings.reset_password_mismatch || 'A confirmação da senha não confere.');
                 return;
             }
 
@@ -1616,10 +1693,10 @@
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok || !payload.success) {
-                    throw new Error(payload.message || 'Falha ao redefinir senha.');
+                    throw new Error(payload.message || strings.reset_password_failed || 'Falha ao redefinir senha.');
                 }
 
-                alert('Senha redefinida com sucesso. FaÃ§a login com a nova senha.');
+                alert(strings.reset_success || 'Senha redefinida com sucesso. Faça login com a nova senha.');
                 showLoginView();
 
                 const loginEmailInput = overlay.querySelector('#loginEmail');
@@ -1630,7 +1707,7 @@
                     loginPasswordInput.focus();
                 }
             } catch (error) {
-                alert(error?.message || 'NÃ£o foi possÃ­vel redefinir a senha agora.');
+                alert(error?.message || strings.reset_password_failed_now || 'Não foi possível redefinir a senha agora.');
             }
         });
 
@@ -1705,7 +1782,7 @@
                         <div class="login-modal__field">
                             <label for="registerGender" data-i18n="register_gender">${strings.register_gender}</label>
                             <select id="registerGender" required>
-                                <option value="" selected disabled>â€”</option>
+                                <option value="" selected disabled>—</option>
                                 <option value="male" data-i18n="register_gender_male">${strings.register_gender_male}</option>
                                 <option value="female" data-i18n="register_gender_female">${strings.register_gender_female}</option>
                                 <option value="nonbinary" data-i18n="register_gender_nonbinary">${strings.register_gender_nonbinary}</option>
@@ -1805,30 +1882,50 @@
             }
         };
 
+        const setNextButtonLoading = (isLoading) => {
+            if (!nextBtn) return;
+            nextBtn.disabled = isLoading;
+            nextBtn.classList.toggle('loading', isLoading);
+            if (isLoading) {
+                nextBtn.dataset.originalLabel = nextBtn.textContent;
+                nextBtn.textContent = strings.register_next_loading || 'Carregando...';
+            } else {
+                nextBtn.textContent = nextBtn.dataset.originalLabel || strings.register_next;
+            }
+        };
+
         const sendConfirmationCodeApi = async (email) => {
             try {
-            const fetchFn = typeof apiFetch !== 'undefined' ? apiFetch : window.apiFetch;
-            if (typeof fetchFn === 'undefined') {
-                throw new Error('apiFetch nÃ£o encontrado.');
-            }
+                const apiBaseUrl = window.API_BASE_URL || 'http://127.0.0.1:5000';
+                const response = await fetch(`${apiBaseUrl}/solicitar_codigo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, lang: window.getCurrentLang?.() || 'pt' })
+                });
 
-            const apiBaseUrl = window.API_BASE_URL || 'http://127.0.0.1:5000';
-            const endpoint = `${apiBaseUrl}/solicitar_codigo`;
-            const payload = await fetchFn(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email })
-            });
-            return { ok: true, payload };
-        } catch (error) {
-            console.error('sendConfirmationCodeApi error:', error);
-            return {
-                ok: false,
-                payload: { message: error.message || 'Falha de rede ou CORS na requisiÃ§Ã£o' }
-            };
-        }
+                const text = await response.text();
+                let payload;
+                try {
+                    payload = text ? JSON.parse(text) : null;
+                } catch (_err) {
+                    payload = text;
+                }
+
+                return {
+                    ok: response.ok && payload?.success !== false,
+                    status: response.status,
+                    payload
+                };
+            } catch (error) {
+                console.error('sendConfirmationCodeApi error:', error);
+                return {
+                    ok: false,
+                    status: null,
+                    payload: { message: error.message || 'Falha de rede ou CORS na requisição' }
+                };
+            }
         };
 
         const verifyConfirmationCodeApi = async (email, code) => {
@@ -1864,10 +1961,10 @@
             const statusTextEl = overlay.querySelector('.register-code-status');
             if (statusTextEl) {
                 if (state === 'valid') {
-                    statusTextEl.textContent = 'CÃ³digo vÃ¡lido';
+                    statusTextEl.textContent = strings.register_code_valid || 'Código válido';
                     statusTextEl.style.color = '#28a745';
                 } else if (state === 'invalid') {
-                    statusTextEl.textContent = 'CÃ³digo invÃ¡lido, verifique e tente novamente';
+                    statusTextEl.textContent = strings.register_code_invalid_try_again || 'Código inválido, verifique e tente novamente';
                     statusTextEl.style.color = '#dc3545';
                 } else {
                     statusTextEl.textContent = '';
@@ -1966,19 +2063,37 @@
 
 
         const registerUserApi = async (userData) => {
-            const fetchFn = typeof apiFetch !== 'undefined' ? apiFetch : window.apiFetch;
-        if (typeof fetchFn === 'undefined') {
-            throw new Error('apiFetch nÃ£o encontrado.');
-        }
+            const apiBaseUrl = window.API_BASE_URL || 'http://127.0.0.1:5000';
+            try {
+                const response = await fetch(`${apiBaseUrl}/register_user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
 
-        const payload = await fetchFn('/register_user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(userData)
-            });
-            return { ok: true, payload };
+                const text = await response.text();
+                let payload;
+                try {
+                    payload = text ? JSON.parse(text) : null;
+                } catch (_err) {
+                    payload = text;
+                }
+
+                return {
+                    ok: response.ok && payload?.success !== false,
+                    status: response.status,
+                    payload
+                };
+            } catch (error) {
+                console.error('registerUserApi error:', error);
+                return {
+                    ok: false,
+                    status: null,
+                    payload: { message: error.message || 'Falha de rede ou CORS na requisição' }
+                };
+            }
         };
 
         const updateResendButton = (seconds) => {
@@ -2036,7 +2151,7 @@
 
         setupCodeInputs();
 
-        nextBtn?.addEventListener('click', () => {
+        nextBtn?.addEventListener('click', async () => {
             const firstName = overlay.querySelector('#registerFirstName');
             const lastName = overlay.querySelector('#registerLastName');
             const email = overlay.querySelector('#registerEmail') || overlay.querySelector('#register-email');
@@ -2080,24 +2195,38 @@
 
             isCodeVerified = false;
             updateSubmitButtonState();
+            setNextButtonLoading(true);
 
-            const emailValue = email.value.trim();
+            const emailValue = email.value.trim().toLowerCase();
 
-            pendingRegisterEmail = emailValue;
-            showStep(2);
-            startResendCountdown(60);
-
-            // enviar async em background e nÃ£o bloquear navegaÃ§Ã£o
-            sendConfirmationCodeApi(emailValue)
-                .then(({ ok, payload }) => {
-                    if (!ok || !payload?.success) {
-                        console.warn('Falha no envio do cÃ³digo:', payload);
-                        return;
+            try {
+                const { ok, status, payload } = await sendConfirmationCodeApi(emailValue);
+                if (!ok || !payload?.success) {
+                    const message = status === 409
+                        ? strings.register_email_already_registered || 'Este e-mail já está cadastrado. Você pode recuperar sua senha ou, se necessário, entre em contato para obter ajuda.'
+                        : (payload?.message || strings.register_code_send_fail || 'Falha ao enviar o código de confirmação.');
+                    if (typeof showGlobalNotification === 'function') {
+                        showGlobalNotification(message, 'error');
+                    } else {
+                        alert(message);
                     }
-                })
-                .catch((err) => {
-                    console.error('Erro ao enviar cÃ³digo de confirmaÃ§Ã£o:', err);
-                });
+                    return;
+                }
+
+                pendingRegisterEmail = emailValue;
+                showStep(2);
+                startResendCountdown(60);
+            } catch (err) {
+                console.error('Erro ao enviar código de confirmação:', err);
+                const message = strings.register_code_send_fail || 'Erro ao enviar o código de confirmação.';
+                if (typeof window.showGlobalNotification === 'function') {
+                    window.showGlobalNotification(message, 'error');
+                } else {
+                    alert(message);
+                }
+            } finally {
+                setNextButtonLoading(false);
+            }
         });
 
         const resendBtn = overlay.querySelector('.register-resend-button');
@@ -2152,7 +2281,7 @@
                 try {
                     const verify = await verifyConfirmationCodeApi(pendingRegisterEmail, code);
                     if (!verify.ok || !verify.payload?.success) {
-                        alert((verify.payload && verify.payload.message) || 'CÃ³digo invÃ¡lido.');
+                        alert((verify.payload && verify.payload.message) || 'Código inválido.');
                         return;
                     }
                     isCodeVerified = true;
@@ -2179,11 +2308,23 @@
 
                 const result = await registerUserApi(userData);
                 if (!result.ok) {
-                    alert(result.payload.message || 'Erro ao concluir cadastro.');
+                    const message = result.status === 409
+                        ? strings.register_email_already_registered || 'Este e-mail já está cadastrado. Você pode recuperar sua senha ou, se necessário, entre em contato para obter ajuda.'
+                        : (result.payload?.message || 'Erro ao concluir cadastro.');
+                    if (typeof showGlobalNotification === 'function') {
+                        showGlobalNotification(message, 'error');
+                    } else {
+                        alert(message);
+                    }
                     return;
                 }
 
-                alert(result.payload.message || 'Cadastro concluÃ­do com sucesso!');
+                const successMessage = result.payload.message || 'Cadastro concluído com sucesso!';
+                if (typeof showGlobalNotification === 'function') {
+                    showGlobalNotification(successMessage, 'success');
+                } else {
+                    alert(successMessage);
+                }
                 closeModal();
             } catch (err) {
                 console.error('Erro no cadastro:', err);
@@ -2268,6 +2409,9 @@
                 const profileBtn = document.querySelector('.profile-btn');
                 if (profileMenu) profileMenu.classList.remove('open');
                 if (profileBtn) profileBtn.setAttribute('aria-expanded', 'false');
+                if (typeof closeMobileMenu === 'function') {
+                    closeMobileMenu();
+                }
 
                 overlay.classList.add('open');
                 document.body.classList.add('modal-open');
@@ -2294,6 +2438,9 @@
                 }
                 if (profileBtn) {
                     profileBtn.setAttribute('aria-expanded', 'false');
+                }
+                if (typeof closeMobileMenu === 'function') {
+                    closeMobileMenu();
                 }
 
                 overlay.classList.add('open');
@@ -3563,6 +3710,35 @@
         });
     };
 
+    const initFooterEmailCopy = () => {
+        const isDesktopDevice = () => !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const emailLink = document.querySelector('a[href="mailto:riobyfoottour@gmail.com"]');
+        if (!emailLink || !isDesktopDevice()) return;
+
+        emailLink.addEventListener('click', async () => {
+            if (!navigator.clipboard || typeof window.showAppNotification !== 'function') return;
+            const email = 'riobyfoottour@gmail.com';
+            const currentLang = typeof window.getCurrentLanguage === 'function'
+                ? window.getCurrentLanguage()
+                : (document.documentElement.lang || 'pt').slice(0, 2);
+            const messageMap = {
+                pt: 'Email copiado para a área de transferência.',
+                en: 'Email copied to clipboard.',
+                es: 'Correo copiado al portapapeles.',
+                fr: 'E-mail copié dans le presse-papiers.',
+                it: 'Email copiato negli appunti.',
+                zh: '电子邮件已复制到剪贴板。'
+            };
+
+            try {
+                await navigator.clipboard.writeText(email);
+                showGlobalNotification(messageMap[currentLang] || messageMap.en, 'success');
+            } catch (error) {
+                console.warn('Falha ao copiar o email:', error);
+            }
+        });
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         // Ensure page starts at the top and focus is set to header for accessibility
         window.scrollTo({ top: 0, behavior: 'instant' });
@@ -3575,11 +3751,15 @@
         initLanguageSelector();
         initHamburgerMenu();
         initMobileMenuContent();
+        if (typeof window.applyRoleBasedControls === 'function') {
+            window.applyRoleBasedControls();
+        }
         initSmoothAnchorScroll();
         initLoginModal();
         initRegisterModal();
         initReservationTracking();
         initFooterInfo();
+        initFooterEmailCopy();
 
         const initializePageContent = async () => {
             try {
