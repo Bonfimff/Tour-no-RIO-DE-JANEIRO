@@ -651,7 +651,7 @@
             footer_ajuda_title: 'AJUDA',
             footer_ajuda: '<p>Se precisar de ajuda, entre em contato pelos canais abaixo (WhatsApp, email ou Instagram) e nossa equipe responderá o mais rápido possível.</p>',
             footer_developed_by_text: 'Desenvolvido por',
-            footer_developed_by: 'Desenvolvido por <a href="mailto:contato@exksvol.com">Exksvol</a>',
+            footer_developed_by: 'Desenvolvido por <a href="mailto:contato.exksvol@gmail.com">Exksvol</a>',
 
             index_title: 'Travel the World',
             index_desc: 'Bem-vindo ao projeto de demonstração. Use o menu para explorar as páginas do site.',
@@ -832,7 +832,7 @@
             footer_ajuda_title: 'HELP',
             footer_ajuda: '<p>If you need help, contact us via the channels below (WhatsApp, email or Instagram) and our team will respond as quickly as possible.</p>',
             footer_developed_by_text: 'Developed by',
-            footer_developed_by: 'Developed by <a href="mailto:contato@exksvol.com">Exksvol</a>',
+            footer_developed_by: 'Developed by <a href="mailto:contato.exksvol@gmail.com">Exksvol</a>',
 
             index_title: 'Travel the World',
             index_desc: 'Welcome to the demo project. Use the menu to explore the site pages.',
@@ -1013,7 +1013,7 @@
             footer_ajuda_title: 'AIDE',
             footer_ajuda: '<p>Besoin d\'aide ? Envoyez-nous un message sur WhatsApp ou consultez la FAQ.</p>',
             footer_developed_by_text: 'Développé par',
-            footer_developed_by: 'Développé par <a href="mailto:contato@exksvol.com">Exksvol</a>',
+            footer_developed_by: 'Développé par <a href="mailto:contato.exksvol@gmail.com">Exksvol</a>',
 
             index_title: 'Voyagez à Travers le Monde',
             index_desc: 'Bienvenue sur le projet de démonstration. Utilisez le menu pour explorer les pages du site.',
@@ -1195,7 +1195,7 @@
             footer_ajuda_title: 'AYUDA',
             footer_ajuda: '<p>¿Necesitas ayuda? Envíanos un mensaje por WhatsApp o revisa la sección de preguntas frecuentes.</p>',
             footer_developed_by_text: 'Desarrollado por',
-            footer_developed_by: 'Desarrollado por <a href="mailto:contato@exksvol.com">Exksvol</a>',
+            footer_developed_by: 'Desarrollado por <a href="mailto:contato.exksvol@gmail.com">Exksvol</a>',
 
             index_title: 'Viaja por el Mundo',
             index_desc: 'Bienvenido al proyecto de demostración. Usa el menú para explorar las páginas del sitio.',
@@ -1377,7 +1377,7 @@
             footer_ajuda_title: 'AIUTO',
             footer_ajuda: '<p>Hai bisogno di aiuto? Inviaci un messaggio su WhatsApp o consulta la sezione FAQ.</p>',
             footer_developed_by_text: 'Sviluppato da',
-            footer_developed_by: 'Sviluppato da <a href="mailto:contato@exksvol.com">Exksvol</a>',
+            footer_developed_by: 'Sviluppato da <a href="mailto:contato.exksvol@gmail.com">Exksvol</a>',
 
             index_title: 'Viaggia il Mondo',
             index_desc: 'Benvenuto nel progetto dimostrativo. Usa il menu per esplorare le pagine del sito.',
@@ -1559,7 +1559,7 @@
             footer_ajuda_title: '帮助',
             footer_ajuda: '<p>如需帮助，请通过 WhatsApp 与我们联系。</p>',
             footer_developed_by_text: '由',
-            footer_developed_by: '由 <a href="mailto:contato@exksvol.com">Exksvol</a> 开发',
+            footer_developed_by: '由 <a href="mailto:contato.exksvol@gmail.com">Exksvol</a> 开发',
             index_title: '环游世界',
             index_desc: '欢迎来到演示项目。',
             index_sobre_title: '关于',

@@ -3425,18 +3425,19 @@ window.addEventListener('DOMContentLoaded', () => {
       item.addEventListener('click', (event) => {
         event.preventDefault();
         const action = item.getAttribute('data-profile-action');
+        const origin = window.location.origin;
         if (action === 'my-reservations') {
           closeMobileMenu();
-          window.location.href = '../index.html';
+          window.location.href = `${origin}/index.html`;
         } else if (action === 'my-data') {
           closeMobileMenu();
-          window.location.href = '../index.html';
+          window.location.href = `${origin}/index.html`;
         } else if (action === 'principal') {
           closeMobileMenu();
-          window.location.href = '../index.html';
+          window.location.href = `${origin}/index.html`;
         } else if (action === 'manage') {
           closeMobileMenu();
-          window.location.href = 'html/Gerenciamento.html';
+          window.location.href = `${origin}/html/Gerenciamento.html`;
         } else if (action === 'logout') {
           localStorage.removeItem('userRole');
           localStorage.removeItem('userEmail');
@@ -3655,26 +3656,27 @@ window.addEventListener('DOMContentLoaded', () => {
         event.stopPropagation();
 
         const action = item.getAttribute('data-profile-action');
+        const origin = window.location.origin;
         if (action === 'my-reservations') {
-          window.location.href = '../index.html';
+          window.location.href = `${origin}/index.html`;
           closeProfileMenu();
           return;
         }
 
         if (action === 'my-data') {
-          window.location.href = '../index.html';
+          window.location.href = `${origin}/index.html`;
           closeProfileMenu();
           return;
         }
 
         if (action === 'principal') {
-          window.location.href = '../index.html';
+          window.location.href = `${origin}/index.html`;
           closeProfileMenu();
           return;
         }
 
         if (action === 'manage') {
-          window.location.href = 'html/Gerenciamento.html';
+          window.location.href = `${origin}/html/Gerenciamento.html`;
           closeProfileMenu();
           return;
         }
